@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2021-07-27T19:02:33.828532+00:00",
+  "timestamp": "2021-08-02T12:25:38.125951+00:00",
   "repo": "quicwg/datagram",
   "labels": [
     {
@@ -1376,7 +1376,7 @@
       "labels": [],
       "body": "Neither this draft nor H3-Datagrams says what the behavior should be when the transport supports DATAGRAM frames but no supported application format has been negotiated for them.  While I think the correct behavior would be to drop them, since there's no ability to interpret their payload, no document actually says that.  There's also a legitimate argument for closing the connection, since something was sent that the application layer can't deal with.\r\n\r\nH3-Datagrams probably can't say that, since the possibility exists that a different datagram-payload format will be deployed for HTTP/3 in the future.  Should this document have a sentence about what happens when the application-layer doesn't define what to do with incoming datagrams / doesn't consume them?\r\n\r\n(There's also the question of simultaneously supporting two different formats, but I think that's an application-layer issue this document can ignore.)",
       "createdAt": "2021-07-20T18:40:20Z",
-      "updatedAt": "2021-07-20T21:13:24Z",
+      "updatedAt": "2021-07-27T19:29:28Z",
       "closedAt": null,
       "comments": [
         {
@@ -1406,6 +1406,13 @@
           "body": "I don't think there's anything concrete the transport can say here, but we could point to the fact that the application needs to define it's behavior for datagrams.",
           "createdAt": "2021-07-20T21:13:24Z",
           "updatedAt": "2021-07-20T21:13:24Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Sense of the room in 111 was that we should probably close this with no action.",
+          "createdAt": "2021-07-27T19:29:28Z",
+          "updatedAt": "2021-07-27T19:29:28Z"
         }
       ]
     },
@@ -1421,7 +1428,7 @@
       "labels": [],
       "body": "I find no discussion about aggregating DATAGRAM frames in the same QUIC packets, with other DATAGRAM frames or other types. Is that so obvious that it is possible that it doesn't need mentioning?\r\n\r\nI would be slightly worried that an QUIC stack that aggregate may cause fate sharing between different datagram frames, which the application wasn't expecting. In a classical UDP application clearly doing two calls for UDP packets will create two different packets. Two calls to transmit Datagram frames may not cause multiple QUIC packets to be sent, which is usually for the good. However, it goes back to maybe be clear that this may occurr, and a question if API needs consideration to indicate if aggregation is fine or not?",
       "createdAt": "2021-07-27T12:56:58Z",
-      "updatedAt": "2021-07-27T18:52:07Z",
+      "updatedAt": "2021-07-27T19:03:37Z",
       "closedAt": null,
       "comments": [
         {
@@ -1437,6 +1444,222 @@
           "body": "So I don't think recommendations are necessary. I think bringing up the issue and the potential need for an API to indicate on per datagram if it is okay for this to be aggregated with other datagrams would be sufficient. \r\n",
           "createdAt": "2021-07-27T18:52:07Z",
           "updatedAt": "2021-07-27T18:52:07Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Hm, I don't know if there needs to an API for this, that seems like an implementation-specific decision. I'd prefer to not add text for this, to let the applications that use datagrams be free in their usage.\r\n\r\nThat's not saying that HTTP/3, CONNECT-UDP, can't make recommendations, just that it doesn't need to belong here.",
+          "createdAt": "2021-07-27T19:03:37Z",
+          "updatedAt": "2021-07-27T19:03:37Z"
+        }
+      ]
+    },
+    {
+      "number": 42,
+      "id": "MDU6SXNzdWU5NTYwMDc3Nzg=",
+      "title": "Allow a Sender to Control Datagram ACKs",
+      "url": "https://github.com/quicwg/datagram/issues/42",
+      "state": "OPEN",
+      "author": "nibanks",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "In discussions with a few parties using MsQuic we've come along scenarios were ACKs for datagrams were either not necessary or they should (almost must) be not sent until some other data was being sent as well. While thinking through these, the simplest solution I've been able to come up with would be for a sender to indicate to the peer that it should not treat datagram frames as ACK eliciting. How do folks feel about adding another (optional) transport parameter to this spec, when present indicates DATAGRAM frames are not ack eliciting. Obviously, the parameter is simply ignored if the peer does not advertise support to receive the frames.",
+      "createdAt": "2021-07-29T16:23:14Z",
+      "updatedAt": "2021-07-30T18:51:49Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "@LPardue brought up a good point on Slack:\r\n\r\n> since datgrams are congestion controlled, if they don't get ACK'd, what would happen?\r\n\r\nMy response:\r\n\r\nGood point. A couple of thoughts:\r\n\r\nIn scenarios where the app is periodically (N datagrams a second) sending data, the ACKs will still be exchanged. Also, any other ACK eliciting data would trigger the exchange of ACKs as well.\r\n\r\nBut we still have the possible scenario of an app sending datagrams in a single direction, with no other feedback in response. I see two possible solutions:\r\n - Do nothing in the transport, but tell the app \"Don't do that!\"\r\n - Have logic in the transport to occasionally (every 1/4 * CWND?) include a PING frame to elicit an ACK to free up CWND.",
+          "createdAt": "2021-07-29T16:28:13Z",
+          "updatedAt": "2021-07-29T16:28:13Z"
+        },
+        {
+          "author": "wegylexy",
+          "authorAssociation": "NONE",
+          "body": "How does _not acking_ affect idle timeout? i.e. client keeps sending datagrams, server never acks.",
+          "createdAt": "2021-07-29T18:10:52Z",
+          "updatedAt": "2021-07-29T18:10:52Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "https://datatracker.ietf.org/doc/html/rfc9000#section-10.1\r\n\r\n>    An endpoint restarts its idle timer when a packet from its peer is\r\n>    received and processed successfully.  An endpoint also restarts its\r\n>    idle timer when sending an ack-eliciting packet if no other ack-\r\n>    eliciting packets have been sent since last receiving and processing\r\n>    a packet.  Restarting this timer when sending a packet ensures that\r\n>    connections are not closed after new activity is initiated.\r\n\r\nSo receiving these packets would reset the idle timeout. Sending them would not, because they aren't ACK-eliciting.",
+          "createdAt": "2021-07-29T18:35:16Z",
+          "updatedAt": "2021-07-29T18:35:16Z"
+        },
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "We've been able to ship the DATAGRAM frame in production without this feature, so I'd suggest this should be written up as an extension to datagrams.",
+          "createdAt": "2021-07-29T21:19:47Z",
+          "updatedAt": "2021-07-29T21:19:47Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "+1 \r\n\r\nDatagrams has been tightly functionally scoped since adoption to the group. We have some IETF adopted protocols on top of QUIC that haven't seemed to need the suggested feature. Adding an optimization feature just as we're getting ready to ship has a bad track record. I think we'd want to see very strong evidence of usefulness and implementer intent of such a feature before considering it for inclusion.",
+          "createdAt": "2021-07-29T21:31:49Z",
+          "updatedAt": "2021-07-29T21:31:54Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "> I think we'd want to see very strong evidence of usefulness and implementer intent of such a feature before considering it for inclusion.\r\n\r\nFair enough. We intend to implement because the usefulness of this extends beyond HTTP scenarios to very general scenarios, including:\r\n\r\n1. Embedded/IoT/portable devices where network usage increases translate to battery life decreases\r\n2. Devices on metered networks where network usage increases translate to higher monetary costs\r\n\r\nGiven how general these scenarios are, I think we should take them into account within the main spec and not delay this for another document. While the spec may be sufficient for HTTP scenarios as-is, it would be a shame for a general transport spec to require an additional extension so it can be optimized for its use by non-HTTP callers who care more about the packet overhead.\r\n\r\nWould a repro of the packet reduction before and after the change be helpful to illustrate the impact of the change?",
+          "createdAt": "2021-07-29T22:34:10Z",
+          "updatedAt": "2021-07-29T22:34:10Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "I could be lacking imagination but I'm not seeing why these problems are unique to DATAGRAM as currently defined. Rather it seems like the ability to reduce any QUIC traffic can benefit such use cases.\r\n\r\nAs an example, we've encountered something similar with the recommended ack policies in the base drafts and how something like ack-frequency can improve upon that for a range of documents.\r\n\r\nSeeing some number would be informative because right now this problem seems nebulous and the proposed solution a bit vague. ",
+          "createdAt": "2021-07-29T22:45:24Z",
+          "updatedAt": "2021-07-29T22:45:24Z"
+        },
+        {
+          "author": "mjoras",
+          "authorAssociation": "NONE",
+          "body": "This seems like a fundamental change to the premise underlying the design of DATAGRAM frames. The choices to make them congestion controlled and ACK-eliciting were pretty deliberate, and I think making that optional serves to confuse the dependency graph of other drafts depending on DATAGRAM, as @LPardue alludes to.\r\n\r\nControlling ACKs is definitely an interesting problem, but I don't think this is pressing enough or specific to DATAGRAM to be in the DATAGRAM spec. One way to work around this, as discussed, is to make a new DATAGRAM type which doesn't elicit ACKs (more closely matching UDP datagram behavior). Such a thing is something that belongs in another extension, IMO.",
+          "createdAt": "2021-07-29T22:51:25Z",
+          "updatedAt": "2021-07-29T22:52:05Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "I agree that the general problem of \"how do we coalesce ACKs to minimize extra packets\" could be solved several ways. The ACK frequency extension is one way possible way (I initially started there, in fact). And yes, the problem _could_ be more generalized to data beyond DATAGRAMS, but there's a natural reason that at least two completely separate groups have come to me and asked for this for just DATAGRAMS: the data is unreliable and the apps have no direct need for the acknowledgements. I don't see this kind of behavior being as necessary for reliable data exactly because it is reliable. It needs to be retransmitted on loss. Therefore you need to determine loss and need those ACKs.\r\n\r\nAssuming then that we would only want to solve this for DATAGRAM, the question is \"How?\". Relying on the ACK frequency extensions has complications because we want to control the behavior based on the presence of the DATAGRAM frame. It seems overly complicated to say \"Please use this ACK frequency parameters, unless it's a DATAGRAM only frame, and then use these instead.\" That produces a pretty complicated implementation and API configuration surface. Configuring the interpretation of how you acknowledge DATAGRAM frames seems simpler: elicit an ACK or not. Can there be issues with congestion control? Yes. Can't you have exactly the same problem if you configured too high of an ACK frequency parameter set {1s delay; 1000pkt threshold)? Haven't heard any problems about that discussed with ACK frequency.\r\n\r\nI hoped to discuss possible solutions to the problem here. If the solutions ends up requiring a new document, then so be it. I can write a new document. I would like folks' opinions on the best way they think to solve this though.",
+          "createdAt": "2021-07-30T00:12:24Z",
+          "updatedAt": "2021-07-30T00:12:24Z"
+        },
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Before we discuss *solutions* in the context of this draft, we should discuss *problems* in the context of this draft. The fact that there are multiple interoperable deployments of this drafts that haven't experienced this problems indicates that this problem is not applicable to all uses of this draft.",
+          "createdAt": "2021-07-30T00:21:48Z",
+          "updatedAt": "2021-07-30T00:21:48Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "I agree that the document works as is, for existing HTTP based scenarios/deployments, but as I understand it, the QUIC WG charter is no longer limited to purely HTTP based workloads. Therefore, is \"what we have works fine for HTTP\" still an acceptable reason to reject proposals related to non-HTTP problems?\r\n\r\nJust to restate the main problem: Battery operated embedded devices that periodically exchange DATAGRAM frames do not want to pay the power cost of waking up to send/receive the ACK-only packets that inevitably get exchanged, because the delayed ACK timer is less than the DATAGRAM send period. But simply increasing the delayed ACK timers has a negative side effect on reliable data that is occasionally exchanged. I understand that we don't want to have feature creep, but IMO, this is not an unreasonable problem to solve with this draft.\r\n\r\nThe simplest solution I've come up with is to allow for making DATAGRAMs not ACK-eliciting, as indicated in #44. Implementations (IMO) should be able to trivially implement the receiver part of this new TP (just treat it as an ACK or PADDING frame), and if they don't expect to ever send it, they don't need to add any extra code for it.",
+          "createdAt": "2021-07-30T16:09:47Z",
+          "updatedAt": "2021-07-30T16:09:47Z"
+        },
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@nibanks this isn't about HTTP. We also have a VPN over QUIC DATAGRAM in production that works well without your proposed change. I think your proposal is in scope for the QUIC WG (though I'll defer to the chairs to make that call), it's just not necessarily in scope for this document. The DATAGRAM extension is general-purpose, whereas your proposal is constrained to a specific class of device. Figuring out how to solve your issue will take time, and I really don't think we should delay the publication of this document because of your specific constrained use-case.",
+          "createdAt": "2021-07-30T16:14:19Z",
+          "updatedAt": "2021-07-30T16:14:19Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "The proposal `max_datagram_no_ack` leaves open a big question about interoperability. If such a client finds it important not to have to do DATAGRAM-related ACK sending or receiving, then it's not clear what they do when a server doesn't advertise that `max_datagram_no_ack`. There's going to be other considerations like this that people would figure out experience - waiting on that before declaring this document done is unfair to the people that are happy with the work we adopted in the first place. \r\n\r\nWearing no hats, I think this use case has the potential to be interesting work worth addressing. If that requires QUIC protocol changes or extensions, the QUIC WG is best placed to do it. It doesn't sound like DATAGRAM prevents future work in that area.",
+          "createdAt": "2021-07-30T16:33:30Z",
+          "updatedAt": "2021-07-30T16:33:30Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "One comment I have related to possibly putting this in a separate document: It would then require two new transport parameters instead of just 1:\r\n\r\n- One TP for a peer to advertise support for the extension (and receiving the next TP).\r\n- One TP for actually disabling ACKs.\r\n\r\nThis would probably **double the implementation cost** because of the additional negotiation logic that would be required to implement along with what already exists for normal datagrams. The feature support matrix gets a lot more complicated.\r\n\r\n> The proposal `max_datagram_no_ack` leaves open a big question about interoperability.\r\n\r\nI don't quite follow the problem you outline here @LPardue. If my proposal were accepted, at a minimum an implementation that supports DATAGRAMs would have to support receiving the new TP, and simply modify their ACK logic accordingly. Implementations that have no need to send the TP don't need to do anything further.",
+          "createdAt": "2021-07-30T16:42:53Z",
+          "updatedAt": "2021-07-30T16:42:53Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "The problem statement is ambiguous then. You say that clients don't want to wake up to send or receive ACKs. If a server supports not ACKing the client DATAGRAM but doesn't send the extension to stop the client ack'ing server DATAGRAMs, is that ok?",
+          "createdAt": "2021-07-30T16:50:18Z",
+          "updatedAt": "2021-07-30T16:50:18Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "It's a unilateral extension where one side says \"Don't ACK my datagarms\" so they don't have to wake up just to process an ACK for the datagram. For protocols where it makes sense, both sides might enable it.",
+          "createdAt": "2021-07-30T16:52:32Z",
+          "updatedAt": "2021-07-30T16:52:32Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "Thanks for the clarification. That seems to put a lot of onus on the receiver of the TP to do work. I.E you'd be asking server implementers to do work even if they have no intention to run deployments that requires this feature. ",
+          "createdAt": "2021-07-30T17:07:16Z",
+          "updatedAt": "2021-07-30T17:07:16Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "Yes, a receiver would have some burden, even if they don't have a corresponding scenario that enables the feature themselves. As I see it, the following changes are required (at a minimum):\r\n\r\n1. Add decoding logic for the new payload-less TP.\r\n2. Add a new connection-wide flag, that is set when the new TP is successfully decoded.\r\n3. When processing received DATAGRAM frames, read the flag and elicit an ACK accordingly.\r\n\r\nIMO, this is not \"a lot of onus\", especially if you compare it to some of the complexity involved in things like migration, ECN or SPA, which, strictly speaking, aren't explicitly required for a deployment to work, but still require a certain amount of work.",
+          "createdAt": "2021-07-30T17:49:19Z",
+          "updatedAt": "2021-07-30T17:49:45Z"
+        },
+        {
+          "author": "wegylexy",
+          "authorAssociation": "NONE",
+          "body": "I think it is rather the reverse: server can opt to tell clients not to expect acks for datagrams that the client may send. This is essential for servers hosted in the cloud where egress is metered and ingress is free. If an old client doesn't support this, it will just assume the datagram is lost as usual.\r\nWhen this is enabled, the server will not ack datagrams at all, not even bundle with other frames. The app may already use stream to control the datagram payload from clients, e.g. server tells clients to lower voice quality via a control stream.",
+          "createdAt": "2021-07-30T17:49:19Z",
+          "updatedAt": "2021-07-30T17:49:19Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "@wegylexy yes, you could go that route, but I think it better for the sender of the DATAGRAMs to be in control, because only they know if they need ACKs or not.",
+          "createdAt": "2021-07-30T17:50:59Z",
+          "updatedAt": "2021-07-30T17:50:59Z"
+        },
+        {
+          "author": "MikeBishop",
+          "authorAssociation": "NONE",
+          "body": "An alternative way to spell this is analogous to PADDING/PING -- have an ack-eliciting-DATAGRAM and a non-ack-eliciting-DATAGRAM codepoint.",
+          "createdAt": "2021-07-30T18:19:21Z",
+          "updatedAt": "2021-07-30T18:19:21Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "Yes, that would be an acceptable approach. To expand a bit on the design/differences:\r\n\r\n1. No new TP; just defines two code point for the two type of frames: DATAGRAM & DATAGRAM_NO_ACK.\r\n2. DATAGRAMs are ACK-eliciting; DATAGRAM_NO_ACKs are not.\r\n\r\nIf folks think that's easier to implement on the receiver side, I'd be fine with that as well.",
+          "createdAt": "2021-07-30T18:24:42Z",
+          "updatedAt": "2021-07-30T18:24:42Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "_typed my answer but got overtaken by events, but posting any way_ \r\n\r\nThe alternative I offered in slack was was to define a new frame type called DATAGRAM_NO_ACK that acts very much like DATAGRAM except it is not ack-eliciting. Endpoints advertise their willingness to receive the frame in a TP, if your peer doesn't support it then you know to either fall back to a less optimized DATAGRAM (maybe with some ACK tuning) or you terminate everything. The requirement on what to do with that individual frame is clear. The onus shifts to the sender to make sure they use the frames appropriately. It also allows a sender to mix in a regular DATAGRAM to ellicit acks when its needed, avoiding the need for pings. \r\n\r\nI think this goes to show that even iff the WG were to agree to solve this problem, we'll take time to agree on the solution acceptable to everyone with an opinion, implementation or deployment concerns.\r\n\r\n> migration, ECN or SPA, which, strictly speaking, aren't explicitly required for a deployment to work, but still require a certain amount of work.\r\n\r\nIn those examples, the peer can't force the endpoints to use the feature. Those examples are also complicated and require page(s) of text to explain the expectations, tradeoffs etc. That's why I'm concerned about tying up the DATAGRAM progress with something that might have considerations we don't know about.",
+          "createdAt": "2021-07-30T18:29:29Z",
+          "updatedAt": "2021-07-30T18:29:29Z"
+        },
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "+1. None of these proposals have anywhere near as much deployment as existing DATAGRAM. We should experiment with these, but not in a way that delays shipping the datagram document.",
+          "createdAt": "2021-07-30T18:51:49Z",
+          "updatedAt": "2021-07-30T18:51:49Z"
+        }
+      ]
+    },
+    {
+      "number": 43,
+      "id": "MDU6SXNzdWU5NTYyNjM3NzA=",
+      "title": "Please define the frame using RFC 9000 style",
+      "url": "https://github.com/quicwg/datagram/issues/43",
+      "state": "OPEN",
+      "author": "LPardue",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "If you're receptive to this suggestion I am happy to file a PR",
+      "createdAt": "2021-07-29T22:57:45Z",
+      "updatedAt": "2021-07-29T23:07:19Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Oh wow I hadn't realized that we never updated to the new style. A PR would be lovely please!",
+          "createdAt": "2021-07-29T23:07:19Z",
+          "updatedAt": "2021-07-29T23:07:19Z"
         }
       ]
     }
@@ -3149,6 +3372,58 @@
           "comments": []
         }
       ]
+    },
+    {
+      "number": 44,
+      "id": "MDExOlB1bGxSZXF1ZXN0Njk5OTI5OTk4",
+      "title": "Datagram No Ack TP Proposal",
+      "url": "https://github.com/quicwg/datagram/pull/44",
+      "state": "OPEN",
+      "author": "nibanks",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "One possible solution for #42. This could be pushed into a separate extension if preferred.",
+      "createdAt": "2021-07-30T01:02:06Z",
+      "updatedAt": "2021-07-30T16:01:42Z",
+      "baseRepository": "quicwg/datagram",
+      "baseRefName": "main",
+      "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
+      "headRepository": "nibanks/datagram",
+      "headRefName": "patch-1",
+      "headRefOid": "847bb65881d9a7c3f0f6be5dc061e3bd543bf93b",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
+    },
+    {
+      "number": 45,
+      "id": "MDExOlB1bGxSZXF1ZXN0NzAwNDk2NjYw",
+      "title": "Datagram No Ack Frame Proposal",
+      "url": "https://github.com/quicwg/datagram/pull/45",
+      "state": "OPEN",
+      "author": "nibanks",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "Another possible solution for #42.",
+      "createdAt": "2021-07-30T18:44:33Z",
+      "updatedAt": "2021-07-30T18:44:33Z",
+      "baseRepository": "quicwg/datagram",
+      "baseRefName": "main",
+      "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
+      "headRepository": "nibanks/datagram",
+      "headRefName": "patch-2",
+      "headRefOid": "9f23a38a25f887dd3026fd1e294aaf275b2196b4",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
     }
   ]
 }
