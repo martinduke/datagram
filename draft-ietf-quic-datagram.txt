@@ -5,9 +5,9 @@
 QUIC                                                            T. Pauly
 Internet-Draft                                                E. Kinnear
 Intended status: Standards Track                              Apple Inc.
-Expires: 28 January 2022                                     D. Schinazi
+Expires: 7 February 2022                                     D. Schinazi
                                                               Google LLC
-                                                            27 July 2021
+                                                           6 August 2021
 
 
                 An Unreliable Datagram Extension to QUIC
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 January 2022.
+   This Internet-Draft will expire on 7 February 2022.
 
 Copyright Notice
 
@@ -209,23 +209,21 @@ Table of Contents
 
    The DATAGRAM frame is structured as follows:
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                        [Length (i)]                         ...
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                      Datagram Data (*)                      ...
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   DATAGRAM Frame {
+     Type (i) = 0x30..0x31,
+     [Length (i)],
+     Datagram Data (..),
+   }
 
                       Figure 1: DATAGRAM Frame Format
 
    DATAGRAM frames contain the following fields:
 
    Length:  A variable-length integer specifying the length of the
-      datagram in bytes.  This field is present only when the LEN bit is
-      set.  If the LEN bit is not set, the datagram data extends to the
-      end of the QUIC packet.  Note that empty (i.e., zero-length)
-      datagrams are allowed.
+      Datagram Data field in bytes.  This field is present only when the
+      LEN bit is set to 1.  When the LEN bit is set to 0, the Datagram
+      Data field extends to the end of the QUIC packet.  Note that empty
+      (i.e., zero-length) datagrams are allowed.
 
    Datagram Data:  The bytes of the datagram to be delivered.
 
