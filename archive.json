@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2021-08-02T12:25:38.125951+00:00",
+  "timestamp": "2021-08-06T16:50:40.811479+00:00",
   "repo": "quicwg/datagram",
   "labels": [
     {
@@ -1466,7 +1466,7 @@
       "labels": [],
       "body": "In discussions with a few parties using MsQuic we've come along scenarios were ACKs for datagrams were either not necessary or they should (almost must) be not sent until some other data was being sent as well. While thinking through these, the simplest solution I've been able to come up with would be for a sender to indicate to the peer that it should not treat datagram frames as ACK eliciting. How do folks feel about adding another (optional) transport parameter to this spec, when present indicates DATAGRAM frames are not ack eliciting. Obviously, the parameter is simply ignored if the peer does not advertise support to receive the frames.",
       "createdAt": "2021-07-29T16:23:14Z",
-      "updatedAt": "2021-07-30T18:51:49Z",
+      "updatedAt": "2021-08-03T14:54:48Z",
       "closedAt": null,
       "comments": [
         {
@@ -1636,6 +1636,13 @@
           "body": "+1. None of these proposals have anywhere near as much deployment as existing DATAGRAM. We should experiment with these, but not in a way that delays shipping the datagram document.",
           "createdAt": "2021-07-30T18:51:49Z",
           "updatedAt": "2021-07-30T18:51:49Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "One way to approach experimentation would be to collect the problem statement and the different proposals into a single I-D, and solicit feedback to gain a sense of whether the community shares the understanding of the problem and has any strong opinion for one of the proposals, or indeed has other ideas. ",
+          "createdAt": "2021-08-03T14:54:47Z",
+          "updatedAt": "2021-08-03T14:54:47Z"
         }
       ]
     },
@@ -1644,15 +1651,15 @@
       "id": "MDU6SXNzdWU5NTYyNjM3NzA=",
       "title": "Please define the frame using RFC 9000 style",
       "url": "https://github.com/quicwg/datagram/issues/43",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "LPardue",
       "authorAssociation": "MEMBER",
       "assignees": [],
       "labels": [],
       "body": "If you're receptive to this suggestion I am happy to file a PR",
       "createdAt": "2021-07-29T22:57:45Z",
-      "updatedAt": "2021-07-29T23:07:19Z",
-      "closedAt": null,
+      "updatedAt": "2021-08-06T16:50:23Z",
+      "closedAt": "2021-08-06T16:50:23Z",
       "comments": [
         {
           "author": "DavidSchinazi",
@@ -3411,7 +3418,7 @@
       "labels": [],
       "body": "Another possible solution for #42.",
       "createdAt": "2021-07-30T18:44:33Z",
-      "updatedAt": "2021-07-30T18:44:33Z",
+      "updatedAt": "2021-08-03T14:51:05Z",
       "baseRepository": "quicwg/datagram",
       "baseRefName": "main",
       "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
@@ -3422,8 +3429,71 @@
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
-      "comments": [],
+      "comments": [
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "This proposal makes the frame mandatory to implement, which means we'd be creating work for dependent documents such as the HTTP/3 datagram draft and WebTransport HTTP/3 mapping, which is owned are owned by MASQUE and WebTransport. Although the authors of the documents are active in the various WG, the wider group would probably need some awareness of such a change.\r\n\r\nAn easy way to avoid that is to require a separate Transport Parameter for using these frame types i.e. `max_datagram_no_ack_frame_size` . That way, implementations and deployments can decide whether they want to support it, and they can clearly communicate that to peers. The natural consequence is that the design becomes a separable extension that builds on top of DATAGRAM, and so it could be pitched to the QUIC WG independent of this draft.",
+          "createdAt": "2021-08-03T14:51:05Z",
+          "updatedAt": "2021-08-03T14:51:05Z"
+        }
+      ],
       "reviews": []
+    },
+    {
+      "number": 46,
+      "id": "MDExOlB1bGxSZXF1ZXN0NzAxNDIwOTEw",
+      "title": "update frame definition format",
+      "url": "https://github.com/quicwg/datagram/pull/46",
+      "state": "MERGED",
+      "author": "LPardue",
+      "authorAssociation": "MEMBER",
+      "assignees": [],
+      "labels": [],
+      "body": "and a bit of editorializing of thee text to match RFC 9000.\r\n\r\nFixes #43",
+      "createdAt": "2021-08-02T12:25:58Z",
+      "updatedAt": "2021-08-06T16:50:24Z",
+      "baseRepository": "quicwg/datagram",
+      "baseRefName": "main",
+      "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
+      "headRepository": "quicwg/datagram",
+      "headRefName": "lucas/editorialize-frame-def",
+      "headRefOid": "8d85d42748f9611d55f318153aa0d4e8b6354a91",
+      "closedAt": "2021-08-06T16:50:24Z",
+      "mergedAt": "2021-08-06T16:50:23Z",
+      "mergedBy": "tfpauly",
+      "mergeCommit": {
+        "oid": "cf91259599049db38701447107ba331d8c6d2279"
+      },
+      "comments": [],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzIwMzkxMDYy",
+          "commit": {
+            "abbreviatedOid": "8d85d42"
+          },
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2021-08-02T16:30:32Z",
+          "updatedAt": "2021-08-02T16:30:32Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzI0NTQyMTEw",
+          "commit": {
+            "abbreviatedOid": "8d85d42"
+          },
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2021-08-06T16:50:10Z",
+          "updatedAt": "2021-08-06T16:50:10Z",
+          "comments": []
+        }
+      ]
     }
   ]
 }
