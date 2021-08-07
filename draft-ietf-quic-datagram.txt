@@ -5,9 +5,9 @@
 QUIC                                                            T. Pauly
 Internet-Draft                                                E. Kinnear
 Intended status: Standards Track                              Apple Inc.
-Expires: 7 February 2022                                     D. Schinazi
+Expires: 8 February 2022                                     D. Schinazi
                                                               Google LLC
-                                                           6 August 2021
+                                                           7 August 2021
 
 
                 An Unreliable Datagram Extension to QUIC
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 7 February 2022.
+   This Internet-Draft will expire on 8 February 2022.
 
 Copyright Notice
 
@@ -319,10 +319,9 @@ Table of Contents
    it [RFC9002].  The sender implementation MUST either delay sending
    the frame until the controller allows it or drop the frame without
    sending it (at which point it MAY notify the application).
-   Implementations that use packet pacing SHOULD support delaying the
-   transmission of DATAGRAM frames for at least the time it takes to
-   send the paced packets allowed by the congestion controller to avoid
-   dropping frames excessively.
+   Implementations that use packet pacing (Section 7.7 of [RFC9002]) can
+   also delay the sending of DATAGRAM frames to maintain consistent
+   packet pacing.
 
    Implementations can optionally support allowing the application to
    specify a sending expiration time, beyond which a congestion-
