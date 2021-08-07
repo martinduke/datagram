@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2021-08-06T16:50:40.811479+00:00",
+  "timestamp": "2021-08-07T01:47:37.002148+00:00",
   "repo": "quicwg/datagram",
   "labels": [
     {
@@ -1327,15 +1327,15 @@
       "id": "MDU6SXNzdWU5NDcyMDg4OTk=",
       "title": "Awkward phrasing of pacing requirement",
       "url": "https://github.com/quicwg/datagram/issues/32",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "martinthomson",
       "authorAssociation": "MEMBER",
       "assignees": [],
       "labels": [],
       "body": "> Implementations that use packet pacing SHOULD support delaying the transmission of DATAGRAM frames for at least the time it takes to send the paced packets allowed by the congestion controller to avoid dropping frames excessively.\r\n\r\nI am having trouble parsing this.  I think that this is saying that if you have a pacer, then an endpoint might delay DATAGRAM frames to avoid overriding the sending rate of the pacer.\r\n\r\nHowever, this seems to imply that the maximum delay imposed here is the inter-packet interval of the pacer.  I think that is a bad assumption, even if it might be a simplifying assumption that some implementations might choose to adopt.  In some cases, the pacer interval will be too slow for the application (for low BDP, high RTT connections especially) or in some cases the pacer interval might be short enough to allow multiple intervals before dropping the packet (for high BDP, short RTT connections).\r\n\r\nThe goal should just be to avoid deferring DATAGRAM sending indefinitely, with controls over any delays being available to applications.\r\n\r\nMaybe:\r\n\r\n> Implementations that use packet pacing ({{Section 7.7 of RFC9002}}) can delay transmission of DATAGRAM frames to avoid having packets sent faster than pacing would otherwise allow.  Any transmission delays will need to allow for application-level constraints on frame delivery times.",
       "createdAt": "2021-07-19T02:51:01Z",
-      "updatedAt": "2021-07-19T23:29:52Z",
-      "closedAt": null,
+      "updatedAt": "2021-08-07T01:47:19Z",
+      "closedAt": "2021-08-07T01:47:19Z",
       "comments": [
         {
           "author": "tfpauly",
@@ -1369,15 +1369,15 @@
       "id": "MDU6SXNzdWU5NDg5MzgzNTk=",
       "title": "Lack of application-defined format",
       "url": "https://github.com/quicwg/datagram/issues/35",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "MikeBishop",
       "authorAssociation": "NONE",
       "assignees": [],
       "labels": [],
       "body": "Neither this draft nor H3-Datagrams says what the behavior should be when the transport supports DATAGRAM frames but no supported application format has been negotiated for them.  While I think the correct behavior would be to drop them, since there's no ability to interpret their payload, no document actually says that.  There's also a legitimate argument for closing the connection, since something was sent that the application layer can't deal with.\r\n\r\nH3-Datagrams probably can't say that, since the possibility exists that a different datagram-payload format will be deployed for HTTP/3 in the future.  Should this document have a sentence about what happens when the application-layer doesn't define what to do with incoming datagrams / doesn't consume them?\r\n\r\n(There's also the question of simultaneously supporting two different formats, but I think that's an application-layer issue this document can ignore.)",
       "createdAt": "2021-07-20T18:40:20Z",
-      "updatedAt": "2021-07-27T19:29:28Z",
-      "closedAt": null,
+      "updatedAt": "2021-08-06T16:50:51Z",
+      "closedAt": "2021-08-06T16:50:51Z",
       "comments": [
         {
           "author": "DavidSchinazi",
@@ -1466,7 +1466,7 @@
       "labels": [],
       "body": "In discussions with a few parties using MsQuic we've come along scenarios were ACKs for datagrams were either not necessary or they should (almost must) be not sent until some other data was being sent as well. While thinking through these, the simplest solution I've been able to come up with would be for a sender to indicate to the peer that it should not treat datagram frames as ACK eliciting. How do folks feel about adding another (optional) transport parameter to this spec, when present indicates DATAGRAM frames are not ack eliciting. Obviously, the parameter is simply ignored if the peer does not advertise support to receive the frames.",
       "createdAt": "2021-07-29T16:23:14Z",
-      "updatedAt": "2021-08-03T14:54:48Z",
+      "updatedAt": "2021-08-06T19:42:22Z",
       "closedAt": null,
       "comments": [
         {
@@ -1643,6 +1643,27 @@
           "body": "One way to approach experimentation would be to collect the problem statement and the different proposals into a single I-D, and solicit feedback to gain a sense of whether the community shares the understanding of the problem and has any strong opinion for one of the proposals, or indeed has other ideas. ",
           "createdAt": "2021-08-03T14:54:47Z",
           "updatedAt": "2021-08-03T14:54:47Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Yes, I think having a new document with a problem statement and proposal would be best here.\r\n\r\nI'd point out that the document does give implementations a fair amount of leeway:\r\n\r\n```\r\nReceivers SHOULD support delaying ACK frames (within the limits specified by max_ack_delay) in reponse to receiving packets that only contain DATAGRAM frames, since the timing of these acknowledgements is not used for loss recovery.\r\n```\r\n\r\nSo, implementations can choose to be fairly lazy in sending ACKs, and can configure a high max_ack_delay. If this really isn't sufficient, I think we need a new proposal.",
+          "createdAt": "2021-08-06T16:59:33Z",
+          "updatedAt": "2021-08-06T16:59:33Z"
+        },
+        {
+          "author": "wegylexy",
+          "authorAssociation": "NONE",
+          "body": "@tfpauly What about low delay for streams but high delay for datagrams? And priority of packets and their acks between streams and datagrams?",
+          "createdAt": "2021-08-06T19:38:38Z",
+          "updatedAt": "2021-08-06T19:38:38Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "An implementation certainly could ACK with larger delays for DATAGRAM-only packets, and shorter delays for packets with STREAM frames. The document already suggests this. However, since ACKs are for packets, not frames, I don't see how prioritization comes into play: once I receive a STREAM frame I can ACK more quickly, which then also covers any DATAGRAM-only packets I had received. ",
+          "createdAt": "2021-08-06T19:42:22Z",
+          "updatedAt": "2021-08-06T19:42:22Z"
         }
       ]
     },
@@ -3027,7 +3048,7 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NjkzODU5MzE2",
       "title": "Rework pacing phrasing",
       "url": "https://github.com/quicwg/datagram/pull/36",
-      "state": "OPEN",
+      "state": "MERGED",
       "author": "tfpauly",
       "authorAssociation": "CONTRIBUTOR",
       "assignees": [
@@ -3036,18 +3057,35 @@
       "labels": [],
       "body": "Closes #32",
       "createdAt": "2021-07-20T21:21:12Z",
-      "updatedAt": "2021-07-21T05:22:55Z",
+      "updatedAt": "2021-08-07T01:47:20Z",
       "baseRepository": "quicwg/datagram",
       "baseRefName": "main",
       "baseRefOid": "61ac20d5a2b6d312941c828810b1c11b31afaff9",
       "headRepository": "quicwg/datagram",
       "headRefName": "tfpauly-patch-1",
-      "headRefOid": "a5861739fbd88af875382a10d21c4264c998143a",
-      "closedAt": null,
-      "mergedAt": null,
-      "mergedBy": null,
-      "mergeCommit": null,
-      "comments": [],
+      "headRefOid": "26c75bddd8b30496756815e93ad814cecc195092",
+      "closedAt": "2021-08-07T01:47:19Z",
+      "mergedAt": "2021-08-07T01:47:19Z",
+      "mergedBy": "tfpauly",
+      "mergeCommit": {
+        "oid": "66f06a613154398ffc93f264d078a8b0bbed588b"
+      },
+      "comments": [
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I've dramatically simplified what we say for pacing now, to just call it out and the fact that it can add slight delays. @DavidSchinazi  @martinthomson  thoughts?",
+          "createdAt": "2021-08-06T20:09:11Z",
+          "updatedAt": "2021-08-06T20:09:11Z"
+        },
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "I like the latest text, it's clear about things that are required, but it doesn't provide advice that we haven't tested. LGTM.",
+          "createdAt": "2021-08-06T21:41:04Z",
+          "updatedAt": "2021-08-06T21:41:04Z"
+        }
+      ],
       "reviews": [
         {
           "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzExMDgxNTAz",
@@ -3128,6 +3166,19 @@
               "updatedAt": "2021-07-21T05:22:55Z"
             }
           ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzI0NzM1ODU0",
+          "commit": {
+            "abbreviatedOid": "26c75bd"
+          },
+          "author": "ekinnear",
+          "authorAssociation": "NONE",
+          "state": "APPROVED",
+          "body": "Small wording nits around \"allows it\" twice, but I don't have a radically better wording handy so looks good :) ",
+          "createdAt": "2021-08-06T22:03:00Z",
+          "updatedAt": "2021-08-06T22:03:00Z",
+          "comments": []
         }
       ]
     },
@@ -3418,7 +3469,7 @@
       "labels": [],
       "body": "Another possible solution for #42.",
       "createdAt": "2021-07-30T18:44:33Z",
-      "updatedAt": "2021-08-03T14:51:05Z",
+      "updatedAt": "2021-08-06T16:52:45Z",
       "baseRepository": "quicwg/datagram",
       "baseRefName": "main",
       "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
@@ -3436,6 +3487,13 @@
           "body": "This proposal makes the frame mandatory to implement, which means we'd be creating work for dependent documents such as the HTTP/3 datagram draft and WebTransport HTTP/3 mapping, which is owned are owned by MASQUE and WebTransport. Although the authors of the documents are active in the various WG, the wider group would probably need some awareness of such a change.\r\n\r\nAn easy way to avoid that is to require a separate Transport Parameter for using these frame types i.e. `max_datagram_no_ack_frame_size` . That way, implementations and deployments can decide whether they want to support it, and they can clearly communicate that to peers. The natural consequence is that the design becomes a separable extension that builds on top of DATAGRAM, and so it could be pitched to the QUIC WG independent of this draft.",
           "createdAt": "2021-08-03T14:51:05Z",
           "updatedAt": "2021-08-03T14:51:05Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Agreed with Lucas. A transport parameter would be preferable here, and I do see it as more of an extension to the extension, rather than a fundamental part of DATAGRAM.",
+          "createdAt": "2021-08-06T16:52:45Z",
+          "updatedAt": "2021-08-06T16:52:45Z"
         }
       ],
       "reviews": []
