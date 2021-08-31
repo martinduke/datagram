@@ -5,9 +5,9 @@
 QUIC                                                            T. Pauly
 Internet-Draft                                                E. Kinnear
 Intended status: Standards Track                              Apple Inc.
-Expires: 8 February 2022                                     D. Schinazi
+Expires: 4 March 2022                                        D. Schinazi
                                                               Google LLC
-                                                           7 August 2021
+                                                          31 August 2021
 
 
                 An Unreliable Datagram Extension to QUIC
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 8 February 2022.
+   This Internet-Draft will expire on 4 March 2022.
 
 Copyright Notice
 
@@ -275,8 +275,12 @@ Table of Contents
    Although DATAGRAM frames are not retransmitted upon loss detection,
    they are ack-eliciting ([RFC9002]).  Receivers SHOULD support
    delaying ACK frames (within the limits specified by max_ack_delay) in
-   reponse to receiving packets that only contain DATAGRAM frames, since
-   the timing of these acknowledgements is not used for loss recovery.
+   response to receiving packets that only contain DATAGRAM frames,
+   since the sender takes no action if these packets are temporarily
+   unacknowledged.  Receivers will continue to send ACK frames when
+   conditions indicate a packet might be lost, since the packet's
+   payload is unknown to the receiver, and when dictated by
+   max_ack_delay or other protocol components.
 
    As with any ack-eliciting frame, when a sender suspects that a packet
    containing only DATAGRAM frames has been lost, it sends probe packets
