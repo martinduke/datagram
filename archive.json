@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2021-08-07T01:47:37.002148+00:00",
+  "timestamp": "2021-08-31T20:30:07.213223+00:00",
   "repo": "quicwg/datagram",
   "labels": [
     {
@@ -1421,15 +1421,15 @@
       "id": "MDU6SXNzdWU5NTM4NTQ5OTI=",
       "title": "Is it obvious that Datagram frame can be aggregated in the same QUIC packet",
       "url": "https://github.com/quicwg/datagram/issues/41",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "gloinul",
       "authorAssociation": "NONE",
       "assignees": [],
       "labels": [],
       "body": "I find no discussion about aggregating DATAGRAM frames in the same QUIC packets, with other DATAGRAM frames or other types. Is that so obvious that it is possible that it doesn't need mentioning?\r\n\r\nI would be slightly worried that an QUIC stack that aggregate may cause fate sharing between different datagram frames, which the application wasn't expecting. In a classical UDP application clearly doing two calls for UDP packets will create two different packets. Two calls to transmit Datagram frames may not cause multiple QUIC packets to be sent, which is usually for the good. However, it goes back to maybe be clear that this may occurr, and a question if API needs consideration to indicate if aggregation is fine or not?",
       "createdAt": "2021-07-27T12:56:58Z",
-      "updatedAt": "2021-07-27T19:03:37Z",
-      "closedAt": null,
+      "updatedAt": "2021-08-26T08:21:10Z",
+      "closedAt": "2021-08-26T08:21:10Z",
       "comments": [
         {
           "author": "DavidSchinazi",
@@ -1451,6 +1451,27 @@
           "body": "Hm, I don't know if there needs to an API for this, that seems like an implementation-specific decision. I'd prefer to not add text for this, to let the applications that use datagrams be free in their usage.\r\n\r\nThat's not saying that HTTP/3, CONNECT-UDP, can't make recommendations, just that it doesn't need to belong here.",
           "createdAt": "2021-07-27T19:03:37Z",
           "updatedAt": "2021-07-27T19:03:37Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "Section 5 and 5.1 mention the frame can be coalesced with other frames in a packet, and some of the multiplexing concerns. That seems like enough to me.\r\n\r\nThe suggestion for a specific API to mark non-coalescing reminds me of an issue I opened (and closed) a year ago - https://github.com/quicwg/datagram/issues/5. \r\n\r\nI think the text in 5.1 is already open enough to allow people to support this capability as part of a \"prioritization API\" if they wanted, saying anything more specific seems subjective and implementation territory - as David and Tommy have said.\r\n\r\n@gloinul I'd like to wrap this issue up and I'm not seeing much for the editors to do. Can we close it or do you have some specific proposal?",
+          "createdAt": "2021-08-16T21:53:41Z",
+          "updatedAt": "2021-08-16T21:53:41Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@gloinul are you okay to close this issue?",
+          "createdAt": "2021-08-23T18:07:04Z",
+          "updatedAt": "2021-08-23T18:07:11Z"
+        },
+        {
+          "author": "gloinul",
+          "authorAssociation": "NONE",
+          "body": "Yes you may close this issue. I think what is in the editors copy are sufficient. ",
+          "createdAt": "2021-08-26T08:21:10Z",
+          "updatedAt": "2021-08-26T08:21:10Z"
         }
       ]
     },
@@ -1466,7 +1487,7 @@
       "labels": [],
       "body": "In discussions with a few parties using MsQuic we've come along scenarios were ACKs for datagrams were either not necessary or they should (almost must) be not sent until some other data was being sent as well. While thinking through these, the simplest solution I've been able to come up with would be for a sender to indicate to the peer that it should not treat datagram frames as ACK eliciting. How do folks feel about adding another (optional) transport parameter to this spec, when present indicates DATAGRAM frames are not ack eliciting. Obviously, the parameter is simply ignored if the peer does not advertise support to receive the frames.",
       "createdAt": "2021-07-29T16:23:14Z",
-      "updatedAt": "2021-08-06T19:42:22Z",
+      "updatedAt": "2021-08-23T18:06:25Z",
       "closedAt": null,
       "comments": [
         {
@@ -1664,6 +1685,13 @@
           "body": "An implementation certainly could ACK with larger delays for DATAGRAM-only packets, and shorter delays for packets with STREAM frames. The document already suggests this. However, since ACKs are for packets, not frames, I don't see how prioritization comes into play: once I receive a STREAM frame I can ACK more quickly, which then also covers any DATAGRAM-only packets I had received. ",
           "createdAt": "2021-08-06T19:42:22Z",
           "updatedAt": "2021-08-06T19:42:22Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@nibanks are you okay to say this is not in scope for the main doc, and take it as a separate discussion in the WG?",
+          "createdAt": "2021-08-23T18:06:25Z",
+          "updatedAt": "2021-08-23T18:06:25Z"
         }
       ]
     },
@@ -1688,6 +1716,58 @@
           "body": "Oh wow I hadn't realized that we never updated to the new style. A PR would be lovely please!",
           "createdAt": "2021-07-29T23:07:19Z",
           "updatedAt": "2021-07-29T23:07:19Z"
+        }
+      ]
+    },
+    {
+      "number": 47,
+      "id": "MDU6SXNzdWU5NzE5OTY4NzA=",
+      "title": "Question about: \"not used for loss recovery\"",
+      "url": "https://github.com/quicwg/datagram/issues/47",
+      "state": "OPEN",
+      "author": "ddragana",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "Can someone explain why the ack from Datagram-only packets are not used for loss recovery?\r\n\r\n> Receivers SHOULD support delaying ACK frames (within the limits specified by max_ack_delay) in reponse to receiving packets that only contain DATAGRAM frames, since the timing of these acknowledgements is not used for loss recovery.\r\n\r\nI would appreciate if someone can point me to an existing discussion or explanation. Thanks.",
+      "createdAt": "2021-08-16T18:30:53Z",
+      "updatedAt": "2021-08-17T19:08:49Z",
+      "closedAt": null,
+      "comments": [
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "That's because datagram-only packets don't contain any frames that need to be retransmitted - so there's no recovery to be done. In other words: what was lost doesn't need to be retransmitted. Therefore it's not urgent to let the peer know that this packet was lost because the peer isn't rushing to retransmit anything.",
+          "createdAt": "2021-08-16T20:46:37Z",
+          "updatedAt": "2021-08-16T20:46:37Z"
+        },
+        {
+          "author": "ddragana",
+          "authorAssociation": "NONE",
+          "body": "> That's because datagram-only packets don't contain any frames that need to be retransmitted - so there's no recovery to be done. In other words: what was lost doesn't need to be retransmitted. Therefore it's not urgent to let the peer know that this packet was lost because the peer isn't rushing to retransmit anything.\r\n\r\nSide note: the last sentence is not correct: the  peer does not know that the packet only contains Datagram frames, because the packet has been lost.\r\n\r\nBack to the original text quoted above. The ack for a Datagram-only packet can still be use to detect loss of other packets, therefore it may be used for loss recovery. In my opinion it should be treated the same as the other ack-eliciting packets. Can we improve he sentence?\r\n",
+          "createdAt": "2021-08-16T21:34:18Z",
+          "updatedAt": "2021-08-16T21:34:18Z"
+        },
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "> Side note: the last sentence is not correct: the peer does not know that the packet only contains Datagram frames, because the packet has been lost.\r\n\r\nIn that sentence, the peer was the endpoint who sent the datagram-only packet, so they know what frames it contains. Apologies if that was unclear.\r\n\r\n> Back to the original text quoted above. The ack for a Datagram-only packet can still be use to detect loss of other packets, therefore it may be used for loss recovery. In my opinion it should be treated the same as the other ack-eliciting packets. Can we improve he sentence?\r\n\r\nThose aren't mutually exclusive. If you receive a train of many datagram-only packets, it is useful to delay acks. If you receive a datagram-only packet whose packet number is more than one apart from the previous packet you saw, then it's indicative of a lost (or reordered) packet so you can act on that to trigger a more urgent ack, regardless of the frame content of the latest received packet.\r\n\r\nBut it's possible we can improve the phrasing in the draft. Do you have a proposal in mind?",
+          "createdAt": "2021-08-16T22:16:15Z",
+          "updatedAt": "2021-08-16T22:16:15Z"
+        },
+        {
+          "author": "MikeBishop",
+          "authorAssociation": "NONE",
+          "body": "It feels like the key realization chain here is:\r\n\r\n- DATAGRAM-only packets have nothing to retransmit if they're lost\r\n- Therefore, senders don't need to keep the payload of these packets around in case they need to retransmit them\r\n- Therefore, receipt of an acknowledgement for a DATAGRAM-only packet frees minimal resources on the sender's side\r\n- Therefore, it's not urgent for receivers to signal that they successfully received a DATAGRAM-only packet\r\n\r\nSo perhaps something like:\r\n\r\n>Receivers SHOULD support delaying ACK frames (within the limits specified by max_ack_delay) in response to receiving packets that only contain DATAGRAM frames, since the sender takes no action if these packets are temporarily unacknowledged.  Receivers SHOULD continue to send ACK frames when conditions indicate a packet might be lost, since the packet's payload is unknown to the receiver, and when dictated by max_ack_delay or other protocol components.\r\n\r\nNote also \"reponse\" => \"response\"",
+          "createdAt": "2021-08-17T15:25:28Z",
+          "updatedAt": "2021-08-17T15:26:00Z"
+        },
+        {
+          "author": "ddragana",
+          "authorAssociation": "NONE",
+          "body": "Thanks. That is more clear. ",
+          "createdAt": "2021-08-17T19:08:49Z",
+          "updatedAt": "2021-08-17T19:08:49Z"
         }
       ]
     }
