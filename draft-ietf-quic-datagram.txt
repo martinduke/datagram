@@ -5,9 +5,9 @@
 QUIC                                                            T. Pauly
 Internet-Draft                                                E. Kinnear
 Intended status: Standards Track                              Apple Inc.
-Expires: 4 March 2022                                        D. Schinazi
+Expires: 21 March 2022                                       D. Schinazi
                                                               Google LLC
-                                                          31 August 2021
+                                                       17 September 2021
 
 
                 An Unreliable Datagram Extension to QUIC
@@ -39,7 +39,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 4 March 2022.
+   This Internet-Draft will expire on 21 March 2022.
 
 Copyright Notice
 
@@ -251,8 +251,8 @@ Table of Contents
 5.1.  Multiplexing Datagrams
 
    DATAGRAM frames belong to a QUIC connection as a whole, and are not
-   strongly associated with any stream ID at the QUIC layer.  However,
-   it is expected that applications will want to differentiate between
+   associated with any stream ID at the QUIC layer.  However, it is
+   expected that applications will want to differentiate between
    specific DATAGRAM frames by using identifiers, such as for logical
    flows of datagrams or to distinguish between different kinds of
    datagrams.
