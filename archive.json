@@ -1,6 +1,6 @@
 {
   "magic": "E!vIA5L86J2I",
-  "timestamp": "2021-08-31T20:30:07.213223+00:00",
+  "timestamp": "2021-09-17T00:06:04.888692+00:00",
   "repo": "quicwg/datagram",
   "labels": [
     {
@@ -1480,15 +1480,15 @@
       "id": "MDU6SXNzdWU5NTYwMDc3Nzg=",
       "title": "Allow a Sender to Control Datagram ACKs",
       "url": "https://github.com/quicwg/datagram/issues/42",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "nibanks",
       "authorAssociation": "MEMBER",
       "assignees": [],
       "labels": [],
       "body": "In discussions with a few parties using MsQuic we've come along scenarios were ACKs for datagrams were either not necessary or they should (almost must) be not sent until some other data was being sent as well. While thinking through these, the simplest solution I've been able to come up with would be for a sender to indicate to the peer that it should not treat datagram frames as ACK eliciting. How do folks feel about adding another (optional) transport parameter to this spec, when present indicates DATAGRAM frames are not ack eliciting. Obviously, the parameter is simply ignored if the peer does not advertise support to receive the frames.",
       "createdAt": "2021-07-29T16:23:14Z",
-      "updatedAt": "2021-08-23T18:06:25Z",
-      "closedAt": null,
+      "updatedAt": "2021-09-16T20:05:01Z",
+      "closedAt": "2021-09-16T20:05:01Z",
       "comments": [
         {
           "author": "nibanks",
@@ -1692,6 +1692,97 @@
           "body": "@nibanks are you okay to say this is not in scope for the main doc, and take it as a separate discussion in the WG?",
           "createdAt": "2021-08-23T18:06:25Z",
           "updatedAt": "2021-08-23T18:06:25Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "In my opinion, this should be included in the core datagram extension. There are two main questions in play here:\r\n\r\n### Should a DATAGRAM sender be allowed to control the ACK behavior?\r\n\r\nThere are many reasons that a QUIC-based protocol would want to control the ACK behavior:\r\n\r\n1. Low power (IoT) devices that have no need/desire to wake up to process an ACK (e.g. sensor periodically sending some state).\r\n2. A need to customize the ACK batching for non-power related reasons, such as more expensive ingress/egress traffic.\r\n3. Generally, more flexibility for existing UDP-based protocols to be ported to QUIC.\r\n\r\nAs already mentioned, packets with DATAGRAM frames are congestion controlled, so senders must be warry and account for this. IMO, there a several ways to handle this and should not be a blocker.\r\n\r\nIf the WG agrees that we should support this, then the following, more contentious, question comes in:\r\n\r\n### Should all DATAGRAM receivers be REQUIRED to support this?\r\n\r\nIn other words, can we make this feature optional (i.e. put it in a separate extension) or not? The only part that would be required if this was added to the DATAGRAM spec is the receiving part, because an implementation doesn't have to send things it doesn't use itself; but it does have to ACK them.\r\n\r\nArguments for making it required:\r\n\r\n- This core DATAGRAM spec is adding a fundamentally new way to exchange data between applications: unreliably. This is an extremely useful feature and lots of different protocols are looking at using this, and the spec should take all of these into account. All reasonable uses of these should be considered in scope. This is all about exchanging data unreliably and the spec should consider both directions of that exchange. Many protocols that need unreliable data on a QUIC connection will not want an explicit ACK to be sent.\r\n\r\n- The additional complexity on an implementation is minimal. A receiver must support treating the DATAGRAM frames just like PADDING if the sender indicates this. It is not required to support the send path if its scenarios (HTTP/3-based?) have no immediate need for it.\r\n\r\nArguments against making it optional:\r\n\r\n- It doubles the failure/edge conditions involved with connection setup. The protocol needs additional logic to handle if the core extension is/isn't enabled, combined with if the new extension is/isn't enabled. This additional logic is much more complicated and error prone, compared to the receiver just treating DATAGRAMSs like PADDING when ACKing.\r\n\r\nResponses to arguments that have been made against requiring it:\r\n\r\n**Existing deployments don't need it.**\r\n\r\nThe spec should take into account more than the current deployments' usages. Other protocols actively looking to use QUIC will use it.\r\n\r\n**We require interop'ing code before requiring anything.**\r\n\r\nIMO, as things stand currently, this is effectively a requirement to interop with an HTTP/3 stack. As far as I know, beyond MsQuic, there are no other deployed QUIC-based protocols beyond HTTP/3. All the existing production implementations and deployments involve HTTP/3. So if there is a feature that existing HTTP/3 stacks have no interest in, there's no way to get interop with those stacks because they won't implement the feature.\r\n\r\nTaking all this into account, my strong preference is to make this a requirement of the core DATAGRAM extension, ideally along the lines of https://github.com/quicwg/datagram/pull/45.",
+          "createdAt": "2021-09-03T12:49:53Z",
+          "updatedAt": "2021-09-03T15:08:51Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "Personally, I think that the use case of QUIC being optimized for IoT devices to the point that it can be used for sending beacon packets without any ACKs or congestion control is out of scope of this document, and belongs as an extension. I think that kind of use case goes beyond just adding unreliable frame support, and needs a lot more advice and changes made to the protocol as a whole, particularly around loss recovery and congestion control.\r\n\r\nAs such, I do not believe this should be a required feature for unreliable DATAGRAM support.",
+          "createdAt": "2021-09-03T16:29:03Z",
+          "updatedAt": "2021-09-03T16:29:03Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "Thanks for the feedback Tommy.\r\n\r\n> can be used for sending beacon packets without any ACKs or congestion control is out of scope of this document\r\n\r\nI think it's an important distinction to tease out: Congestion control still applies 100%. No changes there. Additionally, we aren't doing \"without **any** ACKs\". Congestion control will still limit the amount that can go into the network. We will still require ACKs to remove \"bytes in flight\" to free up the CC window.\r\n\r\n> QUIC being optimized for IoT devices ... is out of scope of this document\r\n\r\nI'd like to clarify this statement further, if possible. Are you saying that in general QUIC for IoT devices is out of scope or were you referring specifically to the ACK/CC stuff (discussed above)? If IoT in general, there is nothing explicitly IoT for this from a protocol stand point. Additionally, TCP, UDP, and TLS don't have a \"here's the IoT specific bits\" associated specs or extensions that I know of. Why should QUIC be any different? If the statement was specific to the ACK/CC stuff, please see my above comments.\r\n\r\n>  that kind of use case goes beyond just adding unreliable frame support\r\n\r\nAssuming you ignore the statement about changing CC (which I am not proposing) and that ACKs are still generally required for all other aspects of the protocol, I strongly believe being able to modify that ACK behavior of the peer for datagrams is in scope for this spec. I see a similar correlation between PING/PADDING in the core spec.",
+          "createdAt": "2021-09-03T16:53:54Z",
+          "updatedAt": "2021-09-03T16:53:54Z"
+        },
+        {
+          "author": "Ralith",
+          "authorAssociation": "NONE",
+          "body": "> As far as I know, beyond MsQuic, there are no other deployed QUIC-based protocols beyond HTTP/3. All the existing production implementations and deployments involve HTTP/3.\r\n\r\nFWIW, quinn implements features regardless of their relevance to HTTP/3, and has non-HTTP/3 users, and considers good datagram support a priority. We're a bit behind on interop setup, though.",
+          "createdAt": "2021-09-03T17:00:23Z",
+          "updatedAt": "2021-09-03T17:00:23Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "If we are still requiring that DATAGRAMs contribute to bytes in flight, but are allowed to not be ACK'ed, we get into the warnings that are around PADDING:\r\n\r\n```\r\nTo avoid a deadlock, a sender SHOULD ensure that other frames are sent periodically in addition to PADDING frames to elicit acknowledgments from the receiver.\r\n```\r\n\r\nNow, it seems unlikely that a QUIC sender would only ever be sending PADDING packets to the point where the a deadlock occurs, but it's quite reasonable to only send DATAGRAM packets for quite a while. Thus this would require that senders also send PINGs to elicit ACKs, and be very careful about doing so to avoid deadlocks.\r\n\r\nThe other way to minimize ACK overhead is to instead delay ACKs, which is what the document already suggests. max_ack_delay can go up to 16 seconds if that's how a specific application wants to configure things. For the use cases you have, is there a hard requirement to have ACKs spread out longer than 16 seconds? The spec can support a truly huge amount of ACK batching.\r\n\r\nAlso, regarding implementation, our implementation for the Apple stack (which is now public API) is QUIC-native without requiring HTTP/3, so I am certainly looking at use cases beyond HTTP/3.",
+          "createdAt": "2021-09-03T18:16:36Z",
+          "updatedAt": "2021-09-03T18:16:36Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "The problem with increasing delayed ACK is its effect on reliable data. IMO, this further argues for why something like this should be in the DATAGRAM spec, and not something else. We don't want to effect reliable data acknowledgements; just the unreliable data.",
+          "createdAt": "2021-09-03T18:28:33Z",
+          "updatedAt": "2021-09-03T18:28:33Z"
+        },
+        {
+          "author": "huitema",
+          "authorAssociation": "NONE",
+          "body": "@nibanks if you want datagrams to not be acknowledged, then logically they should be exempted of congestion control. And then, I would really not want that to be a default or must-support option. If the application really depends on that behavior, why is it not using DTLS instead of QUIC?",
+          "createdAt": "2021-09-03T18:31:52Z",
+          "updatedAt": "2021-09-03T18:31:52Z"
+        },
+        {
+          "author": "nibanks",
+          "authorAssociation": "MEMBER",
+          "body": "@huitema they are still acknowledged. They just don't always need to elicit an immediate ACK. As far as using DTLS, QUIC brings loads of features and improvements compared to DTLS when considering reliable data delivery. Apps that **only** need unreliable delivery aren't the target scenario; apps/protocols that need a mix a reliable and unreliable are.",
+          "createdAt": "2021-09-03T18:41:41Z",
+          "updatedAt": "2021-09-03T18:41:41Z"
+        },
+        {
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "@nibanks the ACK delay is the _max_ ACK delay. Essentially, you can ACK STREAM frames faster if you want\u2014you don't have to delay\u2014but you can delay ACKs for DATAGRAMs for quite a while. This seems like it's very doable for specific applications.",
+          "createdAt": "2021-09-03T19:14:57Z",
+          "updatedAt": "2021-09-03T19:14:57Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "The chairs have been monitoring the discussion on this issue, PRs, and Slack.\r\n\r\nThe DATAGRAM draft was adopted as a simple extension to QUIC that operated within the existing constraints and premises of the core QUIC transport. The ACK-eliciting property of DATAGRAM frames was included in the version of the document that this WG chose to adopt. Treating them this way provides similarity to STREAM frames, which aids user expectations of application data behaviour, and is consistent with the design principle that DATAGRAM frames are subject to congestion control.\r\n\r\nDATAGRAM is an extension to QUIC. Endpoints advertise their ability to receive DATAGRAM frames. Applications that build on top of QUIC need to define handling of this extension negotiation and failure conditions.\r\n\r\nThe stated goals for this proposal can, in part, be achieved by existing QUIC capabilities such as ACK delaying. Where there is a capability gap, the core QUIC transport and DATAGRAM draft do not prevent additional extensions that can fulfil the stated goals. It has been noted that there may be pain for applications that require specific QUIC extensions in order to meet an operational target. The chairs do not believe this problem is unique to DATAGRAM and is something that application will have to accommodate in the long term.\r\n\r\nSeveral members of the WG have noted that changing or augmenting the ACK behaviour of DATAGRAM introduces complication for the design of this extension specifically related to congestion control. For what is a fairly short draft, accommodating a robust and complete solution to this proposal would likely require broad changes of design and editorial nature to this specification. Furthermore, incorporating such a design change as a mandatory part of DATAGRAM risks requiring IETF work items dependent on this specification to also exert effort to accommodate the change. The chairs note that the current design meets the operational targets of IETF protocols such as MASQUE and WebTransport. Meanwhile, while discussion for audio/video use-cases of QUIC seems to be picking up in the IETF (for example the [non-WG MoQ list](https://mailarchive.ietf.org/arch/browse/moq/). It is still early in understanding how DATAGRAM meets or does not meet evolving application needs. Attempting to accommodate emerging needs puts at risk the WGs ability to complete work for dependent applications that already have their needs solved. This is a matter of trade-offs.\r\n\r\nQUIC's strong versioning and extensibility support mean that it can be tailored to the needs or requirements of applications, without necessarily needing coordination between diverse implementers, endpoints, or the QUIC WG. When deciding what work to take on in the QUIC WG, the chairs consider interest from the WG members in both solving the problem and implementing the solution.\r\n\r\nBased on our observations of the discussion on this issue, together with the progress status of the DATAGRAM specification, the chairs do not believe there is sufficient interest in the WG such that this problem needs to be solved as part of this document. The proposal therefore is to close the issue with no action. A consensus call will be sent to the mailing list.\r\n\r\nThe chairs would like to note that a non-ack eliciting DATAGRAM extension is in scope of the QUIC WG should the proponents wish to pursue the work as a separate item.\r\n\r\n\r\n",
+          "createdAt": "2021-09-08T11:12:44Z",
+          "updatedAt": "2021-09-08T11:12:44Z"
+        },
+        {
+          "author": "ianswett",
+          "authorAssociation": "NONE",
+          "body": "I'm just coming into this discussion now, but I support not doing anything in the core datagram draft and instead punting this to the ack-frequency draft.\r\n\r\nI already filed an issue for a frame that makes a packet non-ack-eliciting(https://github.com/quicwg/ack-frequency/issues/65), but there are other ways this could be done(ie: A very high 'ACK-Eliciting Threshold') as well.\r\n\r\n",
+          "createdAt": "2021-09-08T12:35:07Z",
+          "updatedAt": "2021-09-08T12:35:07Z"
+        },
+        {
+          "author": "janaiyengar",
+          "authorAssociation": "NONE",
+          "body": "Just a note to the proponents who might still want to see this work happen elsewhere. As you work through building a case for this, I think it might help if you:\r\n\r\n- build a PoC. ACKs are pretty fundamental to QUIC, so a PoC of QUIC working actually working would be super helpful.\r\n- describe the changes required to congestion controller and loss detection mechanisms. This part is going to be necessary to understand how to reason about such a mechanism.\r\n- lay out the value of doing this beyond reducing ACK frequency. The cost of doing this sort of thing might be quite a bit, probably mostly in terms of reasoning about it.\r\n\r\nIn general, I'll note that a receiver is free to do as it chooses, and it can unilaterally ack (or not) when it wants. The entire point of the ack-frequency draft is for the sender to tell the receiver of its tolerance, to put limits on how long the receiver might delay acks. You might consider building something with a combination of sender tolerance signaling (through ack frequency) and general receiver behavior (through application negotiation, or through a TP, to indicate that a receiver does not need to ack some things immediately).\r\n\r\n",
+          "createdAt": "2021-09-13T20:36:30Z",
+          "updatedAt": "2021-09-13T20:37:01Z"
+        },
+        {
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "body": "Consensus is to close this with no action on the DATAGRAM spec.",
+          "createdAt": "2021-09-16T20:05:01Z",
+          "updatedAt": "2021-09-16T20:05:01Z"
         }
       ]
     },
@@ -1724,15 +1815,15 @@
       "id": "MDU6SXNzdWU5NzE5OTY4NzA=",
       "title": "Question about: \"not used for loss recovery\"",
       "url": "https://github.com/quicwg/datagram/issues/47",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "ddragana",
       "authorAssociation": "NONE",
       "assignees": [],
       "labels": [],
       "body": "Can someone explain why the ack from Datagram-only packets are not used for loss recovery?\r\n\r\n> Receivers SHOULD support delaying ACK frames (within the limits specified by max_ack_delay) in reponse to receiving packets that only contain DATAGRAM frames, since the timing of these acknowledgements is not used for loss recovery.\r\n\r\nI would appreciate if someone can point me to an existing discussion or explanation. Thanks.",
       "createdAt": "2021-08-16T18:30:53Z",
-      "updatedAt": "2021-08-17T19:08:49Z",
-      "closedAt": null,
+      "updatedAt": "2021-08-31T22:02:18Z",
+      "closedAt": "2021-08-31T22:02:18Z",
       "comments": [
         {
           "author": "DavidSchinazi",
@@ -1770,6 +1861,102 @@
           "updatedAt": "2021-08-17T19:08:49Z"
         }
       ]
+    },
+    {
+      "number": 49,
+      "id": "I_kwDODoD7Ms47X0YA",
+      "title": "The ",
+      "url": "https://github.com/quicwg/datagram/issues/49",
+      "state": "CLOSED",
+      "author": "wangweiwei1188",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "The draft-ietf-quic-datagram has the following words: This frame SHOULD be sent as soon as possible, and MAY be coalesced with other frames.If one DATAFRAM frame is coalesced  with STREAM frame in one QUIC packet.And the QUIC packet is lost by the middlebox, according to the rfc9000, the quic packet must be retransmission, But the DATAFRAM frame do not need retransmission.",
+      "createdAt": "2021-09-14T14:38:42Z",
+      "updatedAt": "2021-09-14T14:39:23Z",
+      "closedAt": "2021-09-14T14:39:23Z",
+      "comments": []
+    },
+    {
+      "number": 50,
+      "id": "I_kwDODoD7Ms47X1Bk",
+      "title": "Question about\uff1aThis frame SHOULD be sent as soon as possible, and MAY be coalesced with other frames",
+      "url": "https://github.com/quicwg/datagram/issues/50",
+      "state": "CLOSED",
+      "author": "wangweiwei1188",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "The draft-ietf-quic-datagram has the following words: This frame SHOULD be sent as soon as possible, and MAY be coalesced with other frames.If one DATAFRAM frame is coalesced with STREAM frame in one QUIC packet.And the QUIC packet is lost by the middlebox, according to the rfc9000, the quic packet must be retransmission, But the DATAFRAM frame do not need retransmission.",
+      "createdAt": "2021-09-14T14:41:14Z",
+      "updatedAt": "2021-09-14T16:23:11Z",
+      "closedAt": "2021-09-14T16:23:11Z",
+      "comments": [
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "QUIC does not retransmit packets, it retransmits application data, see [Section 13.3 of RFC 9000](https://datatracker.ietf.org/doc/html/rfc9000#section-13.3). In your example, the data from the STREAM frame would be retransmitted but not the data from the DATAGRAM frame.",
+          "createdAt": "2021-09-14T14:44:51Z",
+          "updatedAt": "2021-09-14T14:44:51Z"
+        },
+        {
+          "author": "wangweiwei1188",
+          "authorAssociation": "NONE",
+          "body": "Okay, Thanks.",
+          "createdAt": "2021-09-14T16:23:05Z",
+          "updatedAt": "2021-09-14T16:23:05Z"
+        }
+      ]
+    },
+    {
+      "number": 51,
+      "id": "I_kwDODoD7Ms47YNZO",
+      "title": "Can DATAGRAM frame belong to stream?",
+      "url": "https://github.com/quicwg/datagram/issues/51",
+      "state": "CLOSED",
+      "author": "wangweiwei1188",
+      "authorAssociation": "NONE",
+      "assignees": [],
+      "labels": [],
+      "body": "The draft-ietf-quic-datagram has the following words: DATAGRAM frames belong to a QUIC connection as a whole, and are not strongly associated with any stream ID at the QUIC layer.\r\nCan DATAGRAM belong to stream?  And one stream has two type: one for unreliable transmission(DATAGRAM FRAME) and another one for reliable transmission(STREAM FRAME).",
+      "createdAt": "2021-09-14T16:18:56Z",
+      "updatedAt": "2021-09-15T14:23:52Z",
+      "closedAt": "2021-09-15T14:23:52Z",
+      "comments": [
+        {
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "body": "At the QUIC layer, datagrams don't belong to streams. In HTTP/3 however, datagrams are associated with streams - see [draft-ietf-masque-h3-datagram](https://datatracker.ietf.org/doc/html/draft-ietf-masque-h3-datagram) for details.",
+          "createdAt": "2021-09-14T17:45:07Z",
+          "updatedAt": "2021-09-14T17:45:07Z"
+        },
+        {
+          "author": "wangweiwei1188",
+          "authorAssociation": "NONE",
+          "body": "OK, Thanks.",
+          "createdAt": "2021-09-15T14:23:45Z",
+          "updatedAt": "2021-09-15T14:23:45Z"
+        }
+      ]
+    },
+    {
+      "number": 52,
+      "id": "I_kwDODoD7Ms47iDD9",
+      "title": "Not \"strongly\" associated",
+      "url": "https://github.com/quicwg/datagram/issues/52",
+      "state": "OPEN",
+      "author": "tfpauly",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [
+        "tfpauly"
+      ],
+      "labels": [],
+      "body": "From list discussion:\r\n\r\n>       DATAGRAM frames belong to a QUIC connection as a whole, and are not \r\n>       strongly associated with any stream ID at the QUIC layer\r\n\r\nWhat does \"strongly associated\" mean in this context?\r\n\r\nWe should remove \"strongly\".",
+      "createdAt": "2021-09-17T00:04:51Z",
+      "updatedAt": "2021-09-17T00:04:51Z",
+      "closedAt": null,
+      "comments": []
     }
   ],
   "pulls": [
@@ -3516,21 +3703,21 @@
       "id": "MDExOlB1bGxSZXF1ZXN0Njk5OTI5OTk4",
       "title": "Datagram No Ack TP Proposal",
       "url": "https://github.com/quicwg/datagram/pull/44",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "nibanks",
       "authorAssociation": "MEMBER",
       "assignees": [],
       "labels": [],
       "body": "One possible solution for #42. This could be pushed into a separate extension if preferred.",
       "createdAt": "2021-07-30T01:02:06Z",
-      "updatedAt": "2021-07-30T16:01:42Z",
+      "updatedAt": "2021-09-16T20:07:31Z",
       "baseRepository": "quicwg/datagram",
       "baseRefName": "main",
       "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
       "headRepository": "nibanks/datagram",
       "headRefName": "patch-1",
       "headRefOid": "847bb65881d9a7c3f0f6be5dc061e3bd543bf93b",
-      "closedAt": null,
+      "closedAt": "2021-09-16T20:07:31Z",
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
@@ -3542,21 +3729,21 @@
       "id": "MDExOlB1bGxSZXF1ZXN0NzAwNDk2NjYw",
       "title": "Datagram No Ack Frame Proposal",
       "url": "https://github.com/quicwg/datagram/pull/45",
-      "state": "OPEN",
+      "state": "CLOSED",
       "author": "nibanks",
       "authorAssociation": "MEMBER",
       "assignees": [],
       "labels": [],
       "body": "Another possible solution for #42.",
       "createdAt": "2021-07-30T18:44:33Z",
-      "updatedAt": "2021-08-06T16:52:45Z",
+      "updatedAt": "2021-09-16T20:07:24Z",
       "baseRepository": "quicwg/datagram",
       "baseRefName": "main",
       "baseRefOid": "67b81e9dcf21fb83f66c750ff4b9c05729042f98",
       "headRepository": "nibanks/datagram",
       "headRefName": "patch-2",
       "headRefOid": "9f23a38a25f887dd3026fd1e294aaf275b2196b4",
-      "closedAt": null,
+      "closedAt": "2021-09-16T20:07:24Z",
       "mergedAt": null,
       "mergedBy": null,
       "mergeCommit": null,
@@ -3632,6 +3819,168 @@
           "comments": []
         }
       ]
+    },
+    {
+      "number": 48,
+      "id": "MDExOlB1bGxSZXF1ZXN0NzIzNzQzMDQy",
+      "title": "Clarify recommendation on datagram acknowledgements",
+      "url": "https://github.com/quicwg/datagram/pull/48",
+      "state": "MERGED",
+      "author": "DavidSchinazi",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [],
+      "labels": [],
+      "body": "This was a suggestion from @MikeBishop.\r\n\r\nFixes #47",
+      "createdAt": "2021-08-31T20:31:31Z",
+      "updatedAt": "2021-08-31T22:02:19Z",
+      "baseRepository": "quicwg/datagram",
+      "baseRefName": "main",
+      "baseRefOid": "66f06a613154398ffc93f264d078a8b0bbed588b",
+      "headRepository": "quicwg/datagram",
+      "headRefName": "not_used_recovery",
+      "headRefOid": "b26e656e060715adbfff5cfe3e7bee83b83e8b03",
+      "closedAt": "2021-08-31T22:02:18Z",
+      "mergedAt": "2021-08-31T22:02:18Z",
+      "mergedBy": "tfpauly",
+      "mergeCommit": {
+        "oid": "58113339500f27f0e3968c5e69da331a157c7f56"
+      },
+      "comments": [],
+      "reviews": [
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzQzMTcwMTI2",
+          "commit": {
+            "abbreviatedOid": "9540fe2"
+          },
+          "author": "LPardue",
+          "authorAssociation": "MEMBER",
+          "state": "APPROVED",
+          "body": "This is an editorial change that clarifies the intent of the text.",
+          "createdAt": "2021-08-31T20:35:04Z",
+          "updatedAt": "2021-08-31T20:35:04Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzQzMTcxMTEz",
+          "commit": {
+            "abbreviatedOid": "9540fe2"
+          },
+          "author": "ekinnear",
+          "authorAssociation": "NONE",
+          "state": "APPROVED",
+          "body": "Seems strictly more clear, nice!",
+          "createdAt": "2021-08-31T20:36:14Z",
+          "updatedAt": "2021-08-31T20:36:14Z",
+          "comments": []
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzQzMTkzMTYx",
+          "commit": {
+            "abbreviatedOid": "9540fe2"
+          },
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "A few nits. I'm also wondering if we should just leave the old sentence ending with \"is not used for loss recovery\", and then explain it.",
+          "createdAt": "2021-08-31T21:04:03Z",
+          "updatedAt": "2021-08-31T21:05:39Z",
+          "comments": [
+            {
+              "originalPosition": 9,
+              "body": "We're not adding new normative behavior for acknowledgements, so I think we should just state the fact of how QUIC will behave here.\r\n\r\n```suggestion\r\naction if these packets are temporarily unacknowledged. Receivers will\r\n```",
+              "createdAt": "2021-08-31T21:04:03Z",
+              "updatedAt": "2021-08-31T21:05:39Z"
+            },
+            {
+              "originalPosition": 11,
+              "body": "What does the \"payload is unknown\" mean?",
+              "createdAt": "2021-08-31T21:04:26Z",
+              "updatedAt": "2021-08-31T21:05:39Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzQzMjIzNDcw",
+          "commit": {
+            "abbreviatedOid": "b26e656"
+          },
+          "author": "DavidSchinazi",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2021-08-31T21:47:02Z",
+          "updatedAt": "2021-08-31T21:47:02Z",
+          "comments": [
+            {
+              "originalPosition": 11,
+              "body": "Unknown as in \"you do not know the contents of a packet that you never received\", so if you see packet numbers 1,2,3,5,6,7,8 you don't know if packet 4 was datagram-only or not, so you shouldn't treat 4 as datagram-only",
+              "createdAt": "2021-08-31T21:47:02Z",
+              "updatedAt": "2021-08-31T21:47:02Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzQzMjMyMTQx",
+          "commit": {
+            "abbreviatedOid": "b26e656"
+          },
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "COMMENTED",
+          "body": "",
+          "createdAt": "2021-08-31T22:01:16Z",
+          "updatedAt": "2021-08-31T22:01:17Z",
+          "comments": [
+            {
+              "originalPosition": 11,
+              "body": "Ah, got it.",
+              "createdAt": "2021-08-31T22:01:17Z",
+              "updatedAt": "2021-08-31T22:01:17Z"
+            }
+          ]
+        },
+        {
+          "id": "MDE3OlB1bGxSZXF1ZXN0UmV2aWV3NzQzMjMyMjE3",
+          "commit": {
+            "abbreviatedOid": "b26e656"
+          },
+          "author": "tfpauly",
+          "authorAssociation": "CONTRIBUTOR",
+          "state": "APPROVED",
+          "body": "",
+          "createdAt": "2021-08-31T22:01:25Z",
+          "updatedAt": "2021-08-31T22:01:25Z",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "number": 53,
+      "id": "PR_kwDODoD7Ms4r3Yxd",
+      "title": "Not \"strongly\" associated",
+      "url": "https://github.com/quicwg/datagram/pull/53",
+      "state": "OPEN",
+      "author": "tfpauly",
+      "authorAssociation": "CONTRIBUTOR",
+      "assignees": [
+        "tfpauly"
+      ],
+      "labels": [],
+      "body": "Closes #52",
+      "createdAt": "2021-09-17T00:06:00Z",
+      "updatedAt": "2021-09-17T00:06:00Z",
+      "baseRepository": "quicwg/datagram",
+      "baseRefName": "main",
+      "baseRefOid": "58113339500f27f0e3968c5e69da331a157c7f56",
+      "headRepository": "quicwg/datagram",
+      "headRefName": "tfpauly-patch-1",
+      "headRefOid": "ced65b0ddfbe041a4d07953c842ddcc982d37952",
+      "closedAt": null,
+      "mergedAt": null,
+      "mergedBy": null,
+      "mergeCommit": null,
+      "comments": [],
+      "reviews": []
     }
   ]
 }
